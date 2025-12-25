@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  patient
+  hospital
+  driver
+}
+
+enum EmergencyStatus {
+  pending
+  assigned
+  en_route
+  arrived
+  completed
+}
+
+model User {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String
+  googleId     String? @unique
+  name         String
+  phone        String
+  role         Role
+
+  bloodType    String?
+  allergies    String[]
+  medicalHistory String?
+  emergencyContactName String?
+  emergencyContactPhone String?
+  emergencyContactRelation String?
+
+  licenseNumber String?
+  department    String?
+  bedIcu        Int?
+  bedGeneral    Int?
+  bedEmergency  Int?
+
+  vehicleType     String?
+  vehiclePlate    String?
+  vehicleCapacity Int?
+
+  address    String?
+  locationLat Float?
+  locationLng Float?
+
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patientEmergencies  Emergency[] @relation("patientEmergencies")
+  hospitalEmergencies Emergency[] @relation("hospitalEmergencies")
+  driverEmergencies   Emergency[] @relation("driverEmergencies")
+}
+
+model Emergency {
+  id String @id @default(cuid())
+
+  patientId String
+  patient   User   @relation("patientEmergencies", fields: [patientId], references: [id])
+
+  assignedHospitalId String?
+  assignedHospital   User? @relation("hospitalEmergencies", fields: [assignedHospitalId], references: [id])
+
+  assignedDriverId String?
+  assignedDriver   User? @relation("driverEmergencies", fields: [assignedDriverId], references: [id])
+
+  status EmergencyStatus @default(pending)
+
+  patientLat Float
+  patientLng Float
+  address    String?
+
+  symptoms      String?
+  severityScore Int?
+  aiAssessment  String?
+
+  driverLat Float?
+  driverLng Float?
+  driverLastLocationUpdate DateTime?
+
+  etaMinutes Int?
+  distanceKm Float?
+
+  triggeredAt DateTime @default(now())
+  acceptedAt  DateTime?
+  arrivedAt   DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents MedicalDocument[]
+
+  @@index([assignedHospitalId])
+  @@index([assignedDriverId])
+  @@index([patientId])
+}
+
+model MedicalDocument {
+  id String @id @default(cuid())
+
+  emergencyId String
+  emergency   Emergency @relation(fields: [emergencyId], references: [id], onDelete: Cascade)
+
+  url         String
+  type        String
+  cloudinaryId String
+  expiresAt   DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([emergencyId])
+  @@index([expiresAt])
+}
