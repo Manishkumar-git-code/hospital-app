@@ -340,6 +340,9 @@ export default function DriverDashboard() {
     setRouteRefreshKey((v) => v + 1);
   }, [isNavigating, ambulancePos, route]);
 
+  const hospitalLat = assignment?.hospital?.location?.lat;
+  const hospitalLng = assignment?.hospital?.location?.lng;
+
   useEffect(() => {
     if (!isNavigating) {
       setRoute([]);
@@ -354,15 +357,14 @@ export default function DriverDashboard() {
 
     const tick = async () => {
       if (stopped) return;
-      const hospitalLoc = assignment?.hospital?.location;
       const hasHospital =
-        hospitalLoc?.lat != null &&
-        hospitalLoc?.lng != null &&
-        Number.isFinite(hospitalLoc.lat) &&
-        Number.isFinite(hospitalLoc.lng);
+        hospitalLat != null &&
+        hospitalLng != null &&
+        Number.isFinite(hospitalLat) &&
+        Number.isFinite(hospitalLng);
 
       const from = ambulancePos;
-      const to = navPhase === 'to_hospital' && hasHospital ? { lat: hospitalLoc.lat, lng: hospitalLoc.lng } : patientPos;
+      const to = navPhase === 'to_hospital' && hasHospital ? { lat: hospitalLat, lng: hospitalLng } : patientPos;
 
       if (!from || !to) {
         timeoutId = setTimeout(tick, 4000);
@@ -426,7 +428,7 @@ export default function DriverDashboard() {
       stopped = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [isNavigating, ambulancePos, patientPos, navPhase, assignment?.hospital?.location?.lat, assignment?.hospital?.location?.lng, routeRefreshKey]);
+  }, [isNavigating, ambulancePos, patientPos, navPhase, hospitalLat, hospitalLng, routeRefreshKey]);
 
   // Update active step (simple: nearest maneuver point)
   useEffect(() => {

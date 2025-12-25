@@ -1,4 +1,6 @@
 // Simplified auth configuration for development
+import type { NextAuthOptions } from "next-auth";
+
 export const authOptions = {
   providers: [],
   pages: {
@@ -6,34 +8,30 @@ export const authOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.email = user.email;
-        token.phone = user.phone;
+      const u = user as any;
+      if (u) {
+        (token as any).id = u.id;
+        (token as any).role = u.role;
+        (token as any).email = u.email;
+        (token as any).phone = u.phone;
       }
       return token;
     },
     async session({ session, token }) {
+      const t = token as any;
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.email = token.email;
-        session.user.phone = token.phone;
+        const su = session.user as any;
+        su.id = t.id;
+        su.role = t.role;
+        su.email = t.email;
+        su.phone = t.phone;
       }
       return session;
     },
-    async authorized({ request, auth }) {
-      const { pathname } = request.nextUrl;
-      if (!auth) {
-        return pathname === "/login";
-      }
-      return true;
-    },
   },
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET || "development-secret",
-};
+} satisfies NextAuthOptions;

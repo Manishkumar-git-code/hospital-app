@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -74,32 +74,35 @@ export default function HospitalDashboard() {
     loadBedCounts();
   }, [user?.email]);
 
-  const loadDocuments = async (emergencyId: string) => {
-    if (!user) return [];
-    setDocsError('');
-    setIsLoadingDocs(true);
-    try {
-      const res = await fetch(`/api/uploads/document?emergencyId=${encodeURIComponent(emergencyId)}`, {
-        headers: {
-          'x-user-id': user.id,
-          'x-user-role': user.role,
-          'x-user-email': user.email,
-        },
-      });
+  const loadDocuments = useCallback(
+    async (emergencyId: string) => {
+      if (!user) return [];
+      setDocsError('');
+      setIsLoadingDocs(true);
+      try {
+        const res = await fetch(`/api/uploads/document?emergencyId=${encodeURIComponent(emergencyId)}`, {
+          headers: {
+            'x-user-id': user.id,
+            'x-user-role': user.role,
+            'x-user-email': user.email,
+          },
+        });
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error || 'Failed to load documents');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data?.error || 'Failed to load documents');
+        }
+
+        return Array.isArray(data?.documents) ? data.documents : [];
+      } catch (e) {
+        setDocsError(e instanceof Error ? e.message : 'Failed to load documents');
+        return [];
+      } finally {
+        setIsLoadingDocs(false);
       }
-
-      return Array.isArray(data?.documents) ? data.documents : [];
-    } catch (e) {
-      setDocsError(e instanceof Error ? e.message : 'Failed to load documents');
-      return [];
-    } finally {
-      setIsLoadingDocs(false);
-    }
-  };
+    },
+    [user]
+  );
 
   const openDocuments = async () => {
     if (!user || !selectedEmergency?.id) return;
@@ -163,7 +166,7 @@ export default function HospitalDashboard() {
     })().finally(() => {
       docsRefreshInFlightRef.current = false;
     });
-  }, [docsMsLeft, isDocsOpen, selectedEmergency?.id]);
+  }, [docsMsLeft, isDocsOpen, selectedEmergency?.id, loadDocuments]);
 
   useEffect(() => {
     if (!selectedEmergency?.id) return;

@@ -17,6 +17,66 @@ type MapMarker = {
   color?: string;
 };
 
+function Controller({
+  center,
+  followCenter,
+  fitBoundsOnRoute,
+  route,
+  markers,
+}: {
+  center: LatLng;
+  followCenter: boolean;
+  fitBoundsOnRoute: boolean;
+  route: LatLng[];
+  markers: MapMarker[];
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      try {
+        map.invalidateSize();
+      } catch {
+        // ignore
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, [map]);
+
+  useEffect(() => {
+    if (!followCenter) return;
+    map.setView([center.lat, center.lng]);
+  }, [center, followCenter, map]);
+
+  useEffect(() => {
+    if (!fitBoundsOnRoute) return;
+
+    const points: LatLng[] = [];
+    if (Array.isArray(route) && route.length >= 2) {
+      points.push(...route);
+    } else if (Array.isArray(markers) && markers.length > 0) {
+      points.push(...markers.map((m) => m.position));
+    }
+
+    if (points.length < 2) return;
+    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
+    map.fitBounds(bounds, { padding: [30, 30] });
+  }, [fitBoundsOnRoute, route, markers, map]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      try {
+        map.invalidateSize();
+      } catch {
+        // ignore
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, [route, markers, map]);
+
+  return null;
+}
+
 export default function LeafletMap({
   center,
   zoom = 13,
@@ -34,54 +94,6 @@ export default function LeafletMap({
   fitBoundsOnRoute?: boolean;
   className?: string;
 }) {
-  function Controller() {
-    const map = useMap();
-
-    useEffect(() => {
-      const id = setTimeout(() => {
-        try {
-          map.invalidateSize();
-        } catch {
-          // ignore
-        }
-      }, 0);
-      return () => clearTimeout(id);
-    }, [map]);
-
-    useEffect(() => {
-      if (!followCenter) return;
-      map.setView([center.lat, center.lng]);
-    }, [center.lat, center.lng, followCenter, map]);
-
-    useEffect(() => {
-      if (!fitBoundsOnRoute) return;
-
-      const points: LatLng[] = [];
-      if (Array.isArray(route) && route.length >= 2) {
-        points.push(...route);
-      } else if (Array.isArray(markers) && markers.length > 0) {
-        points.push(...markers.map((m) => m.position));
-      }
-
-      if (points.length < 2) return;
-      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
-      map.fitBounds(bounds, { padding: [30, 30] });
-    }, [fitBoundsOnRoute, route, markers, map]);
-
-    useEffect(() => {
-      const id = setTimeout(() => {
-        try {
-          map.invalidateSize();
-        } catch {
-          // ignore
-        }
-      }, 0);
-      return () => clearTimeout(id);
-    }, [route, markers, map]);
-
-    return null;
-  }
-
   return (
     <MapContainerAny
       center={[center.lat, center.lng]}
@@ -90,7 +102,13 @@ export default function LeafletMap({
       className={className}
       style={{ width: '100%', height: '100%' }}
     >
-      <Controller />
+      <Controller
+        center={center}
+        followCenter={followCenter}
+        fitBoundsOnRoute={fitBoundsOnRoute}
+        route={route}
+        markers={markers}
+      />
       <TileLayerAny
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
